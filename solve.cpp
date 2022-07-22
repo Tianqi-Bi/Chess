@@ -1,23 +1,22 @@
 #include <cstdio>
-#include <unordered_set>
+#include <map>
+#include<cmath>
 using namespace std;
 
-const short OFFSET[4][3] = {(-1, 0, -4), (1, 0, 4), (0, 1, 1), (0, -1, -1)};
+const short OFFSET[4][3] = {{-1, 0, -4}, {1, 0, 4}, {0, 1, 1}, {0, -1, -1}};
+const short INCLINED_OFFSET[4][3]={{-1,-1,-5},{-1,1,-3},{1,-1,3},{1,1,5}};
 
-struct poi
+typedef map<unsigned int, pair<int, int>> chart;
+chart wMap, bMap;
+
+template <class Ty1, class Ty2>
+pair<Ty1, Ty2> operator+(const pair<Ty1, Ty2> &p1, const pair<Ty1, Ty2> &p2)
 {
-    short x;
-    short y;
-    poi *operator=(const poi &a)
-    {
-        x = a.x;
-        y = a.y;
-        return this;
-    }
-};
-
-unordered_set<unsigned int> wHash, bHash;
-int sum[2];
+    pair<Ty1, Ty2> rt;
+    rt.first = p1.first + p2.first;
+    rt.second = p1.second + p2.second;
+    return rt;
+}
 
 void prt(short *a)
 {
@@ -50,7 +49,7 @@ void change(unsigned int &num, int position, int in)
     return;
 }
 
-unsigned int convert(short *a) //每四位代表一个坐标
+unsigned int convert(const short *a) //每四位代表一个坐标
 {
     unsigned int rt = 0;
     int pWhite = 31, pBlack = 15, x, y;
@@ -88,24 +87,45 @@ unsigned int convert(short *a) //每四位代表一个坐标
     return rt;
 }
 
-int move(short *a, bool player, int step)
+int estimate(const short *a){//估值函数
+    int wnum=0,bnum=0,est=0;
+    int b[16];//b中 白1黑-1
+    for (int i = 0; i < 16; i++)
+    {
+        b[i]=0;
+        if(a[i]==0){
+            b[i]=1;
+            wnum++;
+        }
+        if(a[i]==1){
+            b[i]=-1;
+            bnum++;
+        }
+    }
+    if(wnum==1){
+        return -100;
+    }else if(bnum==1){
+        return 100;
+    }
+
+    if(abs(wnum-bnum)==1){
+        est=(wnum-bnum)*30;
+    }else if(abs(wnum-bnum)==2){
+        est=(wnum-bnum)*70;
+    }
+
+    for (int i = 0; i < 16; i++)
+    {
+        
+    }
+    
+}
+
+pair<int, int> move(short *a, bool player, int step)
 {
-    int key = convert(a);
-    if (!player)
-    {
-        if (wHash.count(key))
-            return 0;
-        else
-            wHash.insert(key);
-    }
-    else
-    {
-        if (bHash.count(key))
-            return 0;
-        else
-            bHash.insert(key);
-    }
-    int x, y;
+
+    int x, y, opx, opy, opi1, opi2;
+    bool op = false, oop1 = false, oop2 = false;
     for (int i = 0; i < 16; i++)
     {
         x = i / 4;
@@ -124,31 +144,28 @@ int move(short *a, bool player, int step)
                     {
                         if (x + OFFSET[k1][0] >= 0 && x + OFFSET[k1][0] < 4 && a[i + OFFSET[k1][2]] == player)
                         {
-                            bool op = false;
-                            int opx, opi;
+                            op = false;
                             for (int m = y; m < 16; m += 4)
                             {
                                 if (a[m] == !player)
                                 {
-                                    opi = m;
+                                    opi1 = m;
                                     opx = m / 4;
                                     op = !op;
                                 }
                             }
                             if (op)
                             {
-                                bool oop = false;
                                 for (int n = 0; n < 2; n++)
                                 {
-                                    if (opx + OFFSET[n][0] >= 0 && opx + OFFSET[n][0] < 4 && a[opi + OFFSET[n][2]] == player)
+                                    if (opx + OFFSET[n][0] >= 0 && opx + OFFSET[n][0] < 4 && a[opi1 + OFFSET[n][2]] == player)
                                     {
-                                        oop = true;
+                                        oop1 = true;
                                     }
                                 }
-                                if (oop)
+                                if (oop1)
                                 {
-                                    a[opi] = -1;
-                                    sum[player]++;
+                                    a[opi1] = -1;
                                 }
                             }
                         }
@@ -157,39 +174,76 @@ int move(short *a, bool player, int step)
                     {
                         if (y + OFFSET[k2][1] >= 0 && y + OFFSET[k2][1] < 4 && a[i + OFFSET[k2][2]] == player)
                         {
-                            bool op = false;
-                            int opy, opi;
+                            op = false;
                             for (int m = x * 4; m < x * 4 + 4; m++)
                             {
                                 if (a[m] == !player)
                                 {
-                                    opi = m;
+                                    opi2 = m;
                                     opy = m % 4;
                                     op = !op;
                                 }
                             }
                             if (op)
                             {
-                                bool oop = false;
                                 for (int n = 2; n < 4; n++)
                                 {
-                                    if (opy + OFFSET[n][0] >= 0 && opy + OFFSET[n][0] < 4 && a[opi + OFFSET[n][2]] == player)
+                                    if (opy + OFFSET[n][0] >= 0 && opy + OFFSET[n][0] < 4 && a[opi2 + OFFSET[n][2]] == player)
                                     {
-                                        oop = true;
+                                        oop2 = true;
                                     }
                                 }
-                                if (oop)
+                                if (oop2)
                                 {
-                                    a[opi] = -1;
-                                    sum[player]++;
+                                    a[opi2] = -1;
                                 }
                             }
                         }
                     }
-                    move(a,!player,step+1);
-                    
+
+                    int key = convert(a);
+                    pair<int, int> rt(0, 0);
+                    if (!player)
+                    {
+                        chart::iterator it = wMap.find(key);
+                        if (it != wMap.end())
+                        {
+                            wMap.insert(pair<unsigned int, pair<int, int>>(key, rt));
+                            rt = rt + move(a, !player, step + 1);
+                            return rt;
+                        }
+                        else
+                        {
+                            rt = make_pair(it->second.first, it->second.second);
+                            return rt;
+                        }
+                    }
+                    else
+                    {
+                        chart::iterator it = bMap.find(key);
+                        if (it != bMap.end())
+                        {
+                            bMap.insert(pair<unsigned int, pair<int, int>>(key, rt));
+                            rt = rt + move(a, !player, step + 1);
+                            return rt;
+                        }
+                        else
+                        {
+                            rt = make_pair(it->second.first, it->second.second);
+                            return rt;
+                        }
+                    }
+
                     a[i] = player;
                     a[i + OFFSET[j][2]] = -1;
+                    if (oop1)
+                    {
+                        a[opi1] = !player;
+                    }
+                    if (oop2)
+                    {
+                        a[opi2] = !player;
+                    }
                 }
             }
         }
